@@ -1,0 +1,13 @@
+language: python
+
+notifications:
+  email: false
+
+python:
+  - "3.6"
+
+install:
+    - pip install pyppeteer
+    - pip install ./
+
+script: pytest
