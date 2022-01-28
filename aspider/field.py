@@ -45,8 +45,8 @@ class TextField(BaseField):
         if is_source:
             return value
         if isinstance(value, list) and len(value) == 1:
+            text = ''
             if isinstance(value[0], etree._Element):
-                text = ''
                 for node in value[0].itertext():
                     text += node.strip()
                 value = text
