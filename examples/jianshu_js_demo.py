@@ -13,12 +13,12 @@ class JianshuItem(Item):
 
 
 class JianshuSpider(Spider):
-    start_urls = ['https://www.jianshu.com/']
+    start_urls = ['http://www.jianshu.com/']
     concurrentcy = 10
     load_js = True
 
     async def parse(self, res):
-        items = await JianshuItem.get_item(html=res.body)
+        items = await JianshuItem.get_items(html=res.body)
         for item in items:
             print(item)
 

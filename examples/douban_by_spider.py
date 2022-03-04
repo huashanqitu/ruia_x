@@ -3,6 +3,7 @@ import sys
 import os
 root_path = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(root_path)
+
 from aspider import TextField, AttrField, Item, Spider, Request
 from aspider.utils import get_random_user_agent
 
