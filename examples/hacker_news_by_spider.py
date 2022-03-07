@@ -26,11 +26,11 @@ class HackerNewsSpider(Spider):
     concurrency = 10
 
     async def parse(self, res):
-        items = await HackerNewsItem.get_items(html=res.body)
+        items = await HackerNewsItem.get_items(html=res.html)
         for item in items:
             async with aiofiles.open('./examples/hacker_news.txt', 'a+') as f:
                 await f.write(item.title + '\n')
 
 
 if __name__ == "__main__":
-    HackerNewsSpider.start()
+    HackerNewsSpider.start(middleware=None)

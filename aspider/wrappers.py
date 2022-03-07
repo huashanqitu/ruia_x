@@ -6,7 +6,7 @@ from importlib import util
 
 from aspider.utils import get_logger
 
-log = get_logger('settings')
+logger = get_logger('settings')
 
 
 class SettingsWrapper:
@@ -28,13 +28,13 @@ class SettingsWrapper:
     def load_with_file(self, file_path):
         file_name = os.path.basename(file_path)
         if file_name[-3:] != '.py':
-            log.error("module name must be python file, such as : example.py")
+            logger.error("module name must be python file, such as : example.py")
 
         module_spec = util.spec_from_file_location(
             file_name, file_path
         )
         if module_spec is None:
-            log.error("Module path: {} not found Module:{}".format(file_name, file_path))
+            logger.error("Module path: {} not found Module:{}".format(file_name, file_path))
             return
         module = util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)
@@ -67,7 +67,7 @@ class SettingsWrapper:
             module = self._dynamic_import(self._closest_file(self.settings_name))
             self.my_settings = self._convert2dict(module)
         except ImportError:
-            log.warning("No default settings found")
+            logger.warning("No default settings found")
 
     def _dynamic_import(self, module_path):
         basename = os.path.basename(module_path)
@@ -80,7 +80,7 @@ class SettingsWrapper:
         )
 
         if module_spec is None:
-            log.error("Module path: {} not found Module:{}".format(module_path, basename))
+            logger.error("Module path: {} not found Module:{}".format(module_path, basename))
             return
         module = util.module_from_spec(module_spec)
         module_spec.loader.exec_module(module)

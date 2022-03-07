@@ -26,7 +26,7 @@ setup(
     name='aspider',
     version=version,
     author='Xiaobo Shang',
-    description="A lightweight,asynchronous, distributed scraping micro-framework",
+    description="aspider - An async web scraping micro-framework based on asyncio",
     long_description=read('README.md'),
     author_email='huashanqitu@gmail.com',
     install_requires=['aiofiles', 'aiohttp', 'cchardet', 'cssselect', 'lxml', 'pyppeteer'],

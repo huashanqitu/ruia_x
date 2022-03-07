@@ -2,12 +2,14 @@
 
 import asyncio
 
-from inspect import iscoroutinefunction
-
 import aiohttp
 import async_timeout
 import cchardet
 import pyppeteer
+
+from inspect import iscoroutinefunction
+from types import AsyncGeneratorType
+from typing import Tuple
 
 try:
     import uvloop
@@ -18,7 +20,6 @@ except ImportError:
 
 from aspider.response import Response
 from aspider.utils import get_logger
-from aspider.wrappers import SettingsWrapper
 
 
 class Request():
@@ -40,6 +41,7 @@ class Request():
                  method: str = 'GET',
                  *,
                  callback=None,
+                 headers: dict = None,
                  load_js: bool = False,
                  metadata: dict = None,
                  extra_value: dict = None,
@@ -65,6 +67,7 @@ class Request():
             raise ValueError('%s method is not supported' % self.method)
 
         self.callback = callback
+        self.headers = headers
         self.load_js = load_js
         self.metadata = metadata if metadata is not None else {}
         self.extra_value = extra_value if extra_value is not None else {}
@@ -86,9 +89,9 @@ class Request():
         self.logger.info(f"<{self.method}:{self.url}>")
         timeout = self.request_config.get('TIMEOUT', 10)
         if self.method == 'GET':
-            request_func = self.current_request_session.get(self.url, verify_ssl=False, **self.kwargs)
+            request_func = self.current_request_session.get(self.url, headers=self.headers, verify_ssl=False, **self.kwargs)
         else:
-            request_func = self.current_request_session.post(self.url, verify_ssl=False, **self.kwargs)
+            request_func = self.current_request_session.post(self.url, headers=self.headers, verify_ssl=False, **self.kwargs)
         return request_func
 
     @property
@@ -103,6 +106,7 @@ class Request():
             await self.browser.close()
         if self.close_request_session:
             await self.request_session.close()
+            self.request_session = None
 
     async def fetch(self) -> Response:
         if self.request_config.get('DELAY', 0) > 0:
@@ -112,13 +116,13 @@ class Request():
             if self.load_js:
                 if not hasattr(self, "browser"):
                     self.browser = await pyppeteer.launch(headless=True, args=['--no-sandbox'])
-                    page = await self.browser.newPage()
-                    res = await page.goto(self.url, options={'timeout': int(timeout*1000)})
-                    data = await page.content()
-                    res_cookies = await page.cookies()
-                    res_headers = res.headers
-                    res_history = None
-                    res_status = res.status
+                page = await self.browser.newPage()
+                res = await page.goto(self.url, options={'timeout': int(timeout*1000)})
+                data = await page.content()
+                res_cookies = await page.cookies()
+                res_headers = res.headers
+                res_history = None
+                res_status = res.status
             else:
                 async with async_timeout.timeout(timeout):
                     async with self.current_request_func as resp:
@@ -148,7 +152,7 @@ class Request():
         await self.close()
 
         response = Response(url=self.url,
-                            body=data,
+                            html=data,
                             metadata=self.metadata,
                             res_type=self.res_type,
                             cookies=res_cookies,
@@ -157,13 +161,14 @@ class Request():
                             status=res_status)
         return response
 
-    async def fetch_callback(self, sem):
+    async def fetch_callback(self, sem) -> Tuple[AsyncGeneratorType, Response]:
         async with sem:
             res = await self.fetch()
         if self.callback is not None:
             try:
                 if iscoroutinefunction(self.callback):
                     callback_res = await self.callback(res)
+                    res.callback_result = callback_res
                 else:
                     callback_res = self.callback(res)
             except Exception as e:
