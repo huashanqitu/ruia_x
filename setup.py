@@ -30,7 +30,7 @@ setup(
     long_description=read('README.md'),
     author_email='huashanqitu@gmail.com',
     install_requires=['aiofiles', 'aiohttp', 'cchardet', 'cssselect', 'lxml', 'pyppeteer'],
-    url="https://github.com/howie6879/aspider/blob/master/README.md",
+    url="https://github.com/huashanqitu/ruia_x/blob/main/README.md",
     packages=find_packages(),
     license='MIT',
     classifiers=[
@@ -41,8 +41,8 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     project_urls={
-        'Documentation': 'https://github.com/howie6879/aspider',
-        'Source': 'https://github.com/howie6879/aspider',
+        'Documentation': 'https://github.com/huashanqitu/ruia_x',
+        'Source': 'https://github.com/huashanqitu/ruia_x',
     },
     package_data={'aspider': ['utils/*.txt']},
     extras_require={

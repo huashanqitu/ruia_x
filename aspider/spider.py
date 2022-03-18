@@ -50,9 +50,9 @@ class Spider:
         raise NotImplementedError
 
     async def handle_request(self, request):
-        # request middleware
+        # request_test middleware
         await self._run_request_middleware(request)
-        # make a request
+        # make a request_test
         callback_res, response = await request.fetch_callback(self.sem)
         # response middleware
         await self._run_response_middleware(request, response)

@@ -24,7 +24,7 @@ from aspider.utils import get_logger
 
 class Request():
     """
-    Request class for each request
+    Request class for each request_test
     """
     name = 'Request'
 
