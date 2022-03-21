@@ -63,7 +63,7 @@ class Spider:
             request_ins = Request(url=url,
                                   callback=self.parse,
                                   metadata=getattr(self, 'metadata', None),
-                                  headers=getattr(self, 'headers', None),
+                                  headers=getattr(self, 'headers', {}),
                                   load_js=getattr(self, 'load_js', False),
                                   request_config=getattr(self, 'request_config'),
                                   request_session=getattr(self, 'request_session', None),
@@ -98,9 +98,11 @@ class Spider:
         yield Request(url=url)
 
     @classmethod
-    def start(cls, middleware=None, loop=None):
+    def start(cls, after_start=None, before_stop=None, middleware=None, loop=None):
         """
         Start a spider
+        :param after_start:
+        :param before_stop
         :param middleware: customize middleware
         :param loop: event loop
         :return:
@@ -108,6 +110,12 @@ class Spider:
         spider_ins = cls(middleware=middleware, loop=loop)
         spider_ins.logger.info('Spider started')
         start_time = datetime.now()
+
+        if after_start:
+            result = after_start(spider_ins.loop)
+            if isawaitable(result):
+                spider_ins.loop.run_until_complete(result)
+
         for _signal in (SIGINT, SIGTERM):
             try:
                 spider_ins.loop.add_signal_handler(_signal, lambda: asyncio.ensure_future(spider_ins.stop(_signal)))
@@ -117,6 +125,12 @@ class Spider:
         try:
             spider_ins.loop.run_forever()
         finally:
+
+            if before_stop:
+                result = before_stop(spider_ins.loop)
+                if isawaitable(result):
+                    spider_ins.loop.run_until_complete(result)
+
             end_time = datetime.now()
             spider_ins.logger.info(f'Total requests: {spider_ins.failed_counts + spider_ins.success_counts}')
             if spider_ins.failed_counts:
