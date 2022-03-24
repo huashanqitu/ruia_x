@@ -3,6 +3,7 @@
 import asyncio
 
 from datetime import datetime
+from functools import reduce
 from inspect import isawaitable
 from signal import SIGINT, SIGTERM
 from types import AsyncGeneratorType
@@ -33,26 +34,65 @@ class Spider:
         self.loop = loop or asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         # customize middleware
-        self.middleware = middleware or Middleware()
+        if isinstance(middleware, list):
+            self.middleware = reduce(lambda x, y: x+y, middleware)
+        else:
+            self.middleware = middleware or Middleware()
         # async queue
         self.request_queue = asyncio.Queue()
         # semaphore
         self.sem = asyncio.Semaphore(getattr(self, 'concurrency', 3))
 
-    @property
-    def is_running(self):
-        is_running = True
-        if self.request_queue.empty():
-            is_running = False
-        return is_running
-
     async def parse(self, res):
         raise NotImplementedError
 
+    @classmethod
+    def start(cls, after_start=None, before_stop=None, middleware=None, loop=None):
+        """
+        Start a spider
+        :param after_start:
+        :param before_stop
+        :param middleware: customize middleware or a list of middleware
+        :param loop: event loop
+        :return:
+        """
+        spider_ins = cls(middleware=middleware, loop=loop)
+        spider_ins.logger.info('Spider started')
+        start_time = datetime.now()
+
+        if after_start:
+            result = after_start(spider_ins.loop)
+            if isawaitable(result):
+                spider_ins.loop.run_until_complete(result)
+
+        for _signal in (SIGINT, SIGTERM):
+            try:
+                spider_ins.loop.add_signal_handler(_signal, lambda: asyncio.ensure_future(spider_ins.stop(_signal)))
+            except NotImplementedError:
+                spider_ins.logger.warning(f'{spider_ins.name} tried to use loop.add_signal_handler but it is not implemented on this platform.')
+        asyncio.ensure_future(spider_ins.start_master())
+        try:
+            spider_ins.loop.run_forever()
+        finally:
+
+            if before_stop:
+                result = before_stop(spider_ins.loop)
+                if isawaitable(result):
+                    spider_ins.loop.run_until_complete(result)
+
+            end_time = datetime.now()
+            spider_ins.logger.info(f'Total requests: {spider_ins.failed_counts + spider_ins.success_counts}')
+            if spider_ins.failed_counts:
+                spider_ins.logger.info(f'Failed requests: {spider_ins.failed_counts}')
+            spider_ins.logger.info(f'Time usage: {end_time - start_time}')
+            spider_ins.logger.info('Spider finished!')
+            spider_ins.loop.run_until_complete(spider_ins.loop.shutdown_asyncgens())
+            spider_ins.loop.close()
+
     async def handle_request(self, request):
-        # request_test middleware
+        # request middleware
         await self._run_request_middleware(request)
-        # make a request_test
+        # make a request
         callback_res, response = await request.fetch_callback(self.sem)
         # response middleware
         await self._run_response_middleware(request, response)
@@ -94,52 +134,6 @@ class Spider:
                 self.worker_tasks = []
             self.request_queue.task_done()
 
-    def make_request_from_url(self, url):
-        yield Request(url=url)
-
-    @classmethod
-    def start(cls, after_start=None, before_stop=None, middleware=None, loop=None):
-        """
-        Start a spider
-        :param after_start:
-        :param before_stop
-        :param middleware: customize middleware
-        :param loop: event loop
-        :return:
-        """
-        spider_ins = cls(middleware=middleware, loop=loop)
-        spider_ins.logger.info('Spider started')
-        start_time = datetime.now()
-
-        if after_start:
-            result = after_start(spider_ins.loop)
-            if isawaitable(result):
-                spider_ins.loop.run_until_complete(result)
-
-        for _signal in (SIGINT, SIGTERM):
-            try:
-                spider_ins.loop.add_signal_handler(_signal, lambda: asyncio.ensure_future(spider_ins.stop(_signal)))
-            except NotImplementedError:
-                spider_ins.logger.warning(f'{spider_ins.name} tried to use loop.add_signal_handler but it is not implemented on this platform.')
-        asyncio.ensure_future(spider_ins.start_master())
-        try:
-            spider_ins.loop.run_forever()
-        finally:
-
-            if before_stop:
-                result = before_stop(spider_ins.loop)
-                if isawaitable(result):
-                    spider_ins.loop.run_until_complete(result)
-
-            end_time = datetime.now()
-            spider_ins.logger.info(f'Total requests: {spider_ins.failed_counts + spider_ins.success_counts}')
-            if spider_ins.failed_counts:
-                spider_ins.logger.info(f'Failed requests: {spider_ins.failed_counts}')
-            spider_ins.logger.info(f'Time usage: {end_time - start_time}')
-            spider_ins.logger.info('Spider finished!')
-            spider_ins.loop.run_until_complete(spider_ins.loop.shutdown_asyncgens())
-            spider_ins.loop.close()
-
     async def stop(self, _signal):
         self.logger.info(f'Stopping spider: {self.name}')
         tasks = [task for task in asyncio.Task.all_tasks() if task is not asyncio.tasks.Task.current_task()]
@@ -152,7 +146,10 @@ class Spider:
             for middleware in self.middleware.request_middleware:
                 middleware_func = middleware(request)
                 if isawaitable(middleware_func):
-                    result = await middleware_func
+                    try:
+                        result = await middleware_func
+                    except Exception as e:
+                        self.logger.exception(e)
                 else:
                     self.logger.error('Middleware must be a coroutine function')
                     result = None
@@ -162,7 +159,10 @@ class Spider:
             for middleware in self.middleware.response_middleware:
                 middleware_func = middleware(request, response)
                 if isawaitable(middleware_func):
-                    result = await middleware_func
+                    try:
+                        result = await middleware_func
+                    except Exception as e:
+                        self.logger.exception(e)
                 else:
                     self.logger.error('Middleware must be a coroutine function')
                     result = None

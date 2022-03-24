@@ -40,10 +40,8 @@ class DoubanSpider(Spider):
             url = self.start_urls[0] + page
             yield Request(url,
                           request_config=self.request_config,
-                          headers=headers,
                           callback=self.parse_item,
                           metadata={'index': index},
-                          load_js=True
                           )
 
     async def parse_item(self, res):

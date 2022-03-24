@@ -6,25 +6,25 @@ from functools import wraps
 
 class Middleware:
     """
-    Define a middleware to customize the crawler request_test or response
+    Define a middleware to customize the crawler request or response
     eg: middleware = Middleware()
     """
 
     def __init__(self):
-        # request_test middleware
+        # request middleware
         self.request_middleware = deque()
         # response middleware
         self.response_middleware = deque()
 
     def listener(self, uri, target, **kwargs):
         """
-        Decorates to be called before a special request_test or response
-        TODO: handling different urls for request_test/response
-        eg: @middleware.listener('/post', 'request_test')
+        Decorates to be called before a special request or response
+        TODO: handling different urls for request/response
+        eg: @middleware.listener('/post', 'request')
         """
 
         def register_middleware(middleware):
-            if target == 'request_test':
+            if target == 'request':
                 self.request_middleware.append(middleware)
             if target == 'response':
                 self.response_middleware.append(middleware)
@@ -34,8 +34,8 @@ class Middleware:
 
     def request(self, *args, **kwargs):
         """
-        Define a Decorate to be called before a request_test.
-        eg: @middleware.request_test
+        Define a Decorate to be called before a request.
+        eg: @middleware.request
         """
         middleware = args[0]
 
@@ -59,3 +59,13 @@ class Middleware:
             return middleware
 
         return register_middleware()
+
+    def __add__(self, other):
+        new_middleware = Middleware()
+        #asc
+        new_middleware.request_middleware.extend(self.request_middleware)
+        new_middleware.request_middleware.extend(other.request_middleware)
+        #desc
+        new_middleware.response_middleware.extend(self.response_middleware)
+        new_middleware.response_middleware.extend(other.response_middleware)
+        return new_middleware

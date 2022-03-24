@@ -24,7 +24,7 @@ from aspider.utils import get_logger
 
 class Request():
     """
-    Request class for each request_test
+    Request class for each request
     """
     name = 'Request'
 
@@ -69,7 +69,6 @@ class Request():
         self.headers = headers
         self.load_js = load_js
         self.metadata = metadata if metadata is not None else {}
-        self.extra_value = extra_value if extra_value is not None else {}
         self.request_session = request_session
         if request_config is None:
             self.request_config = self.REQUEST_CONFIG
