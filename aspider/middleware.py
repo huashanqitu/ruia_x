@@ -29,7 +29,6 @@ class Middleware:
             if target == 'response':
                 self.response_middleware.append(middleware)
             return middleware
-
         return register_middleware
 
     def request(self, *args, **kwargs):

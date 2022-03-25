@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import aiofiles
 
-from aspider import AttrField, TextField, Spider, Item
+from aspider import AttrField, TextField, Item, Spider
 
 
 class HackerNewsItem(Item):
@@ -9,11 +9,8 @@ class HackerNewsItem(Item):
     title = TextField(css_select='a')
     links = AttrField(css_select='a', attr='href')
 
-    async def clean_title(self, title):
-        if isinstance(title, str):
-            return title
-        else:
-            return ''.join([i.text.strip().replace('\xa0', '') for i in title])
+    async def clean_title(self, value):
+        return value
 
 
 class HackerNewsSpider(Spider):
@@ -24,9 +21,9 @@ class HackerNewsSpider(Spider):
     async def parse(self, res):
         items = await HackerNewsItem.get_items(html=res.html)
         for item in items:
-            async with aiofiles.open('./examples/hacker_news.txt', 'a+') as f:
+            async with aiofiles.open('./hacker_news.txt', 'a+') as f:
                 await f.write(item.title + '\n')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     HackerNewsSpider.start(middleware=None)

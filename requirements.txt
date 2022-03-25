@@ -2,6 +2,7 @@ aiofiles==0.3.2
 aiohttp==3.3.2
 aiosignal==1.2.0
 appdirs==1.4.4
+-e git+https://github.com/huashanqitu/ruia_x.git@e4a8006e7f21917b8a52243143290d6fc39cce25#egg=aspider
 async-timeout==3.0.1
 asynctest==0.13.0
 atomicwrites==1.4.0
@@ -20,7 +21,7 @@ more-itertools==8.12.0
 multidict==4.7.6
 pluggy==0.6.0
 py==1.11.0
-pyee==9.0.3
+pyee==6.0.0
 pyppeteer==0.0.24
 pytest==3.6.3
 six==1.16.0

@@ -1,16 +1,11 @@
-#!/usr/bin/env python
-from aspider import TextField, AttrField, Item, Spider, Request, Middleware
-
-middleware = Middleware()
-
-
-@middleware.response
-async def print_on_response(request, response):
-    if response.callback_result:
-        print(response.callback_result)
+from aspider import AttrField, TextField, Item, Request, Spider
 
 
 class DoubanItem(Item):
+    """
+    定义爬虫的目标字段
+    """
+
     target_item = TextField(css_select="div.item")
     title = TextField(css_select='span.title')
     cover = AttrField(css_select='div.pic>a>img', attr='src')
@@ -24,6 +19,9 @@ class DoubanItem(Item):
 
 
 class DoubanSpider(Spider):
+    """
+    爬虫程序的入口
+    """
     start_urls = ['https://movie.douban.com/top250']
     request_config = {
         'RETRIES': 3,
@@ -34,15 +32,15 @@ class DoubanSpider(Spider):
 
     async def parse(self, res):
         etree = res.e_html
-        pages = [i.get('href') for i in etree.cssselect('.paginator>a')]
-        pages.insert(0, '?start=0&filter=')
+        pages = ['?start=0&filter='] + [i.get('href') for i in etree.cssselect('.paginator>a')]
         for index, page in enumerate(pages):
             url = self.start_urls[0] + page
-            yield Request(url,
-                          request_config=self.request_config,
-                          callback=self.parse_item,
-                          metadata={'index': index},
-                          )
+            yield Request(
+                url,
+                callback=self.parse_item,
+                metadata={'index': index},
+                request_config=self.request_config
+            )
 
     async def parse_item(self, res):
         items_data = await DoubanItem.get_items(html=res.html)
@@ -52,5 +50,5 @@ class DoubanSpider(Spider):
         return title_list
 
 
-if __name__ == "__main__":
-    DoubanSpider.start(middleware=middleware)
+if __name__ == '__main__':
+    DoubanSpider.start()
